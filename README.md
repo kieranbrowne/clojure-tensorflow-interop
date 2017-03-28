@@ -35,7 +35,7 @@ $ mvn install:install-file \
 		-Dfile=libtensorflow-1.0.0-PREVIEW1.jar \
 ```
 
-## Method 3: Build from source
+## Method 2: Build from source
 
 TensorFlow's java api is in active development with changes and improvments added every other day. By building from source, you have access to the latest changes to TensorFlow as they are added. This method of course takes much longer.
 

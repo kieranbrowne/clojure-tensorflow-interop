@@ -6,5 +6,5 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.tensorflow/libtensorflow "1.0.1"
                   :native-prefix ""]]
-  :native-path "~/Downloads/jni"
+  :native-path "/users/kieran/Downloads/jni"
   )
