@@ -8,8 +8,13 @@
             Operation
             OperationBuilder
             Graph
-            DataType]
-           ))
+            DataType])
+  ;; data.csv is only used for reading example data
+  ;; not a requirement for using tensorflow
+  (:require
+   [clojure-tensorflow-interop.api :as tf]
+   [clojure.data.csv :as csv]
+   [clojure-tensorflow-interop.utils :as utils]))
 
 ;; We can test our installation by running the version method
 ;; on the TensorFlow class.
@@ -101,6 +106,7 @@
    (.output 0)
    ))
 
+
 ;; To run our newly built operations, we need to create a session object
 ;; based on our graph.
 (def session (new Session graph))
@@ -157,31 +163,6 @@
 ;; s-expression into a big hairy TensorFlow operation.
 
 
-;; We need a fn to turn clojure data structures to types
-;; that TensorFlow accepts
-(defn tf-vals [v]
-  (cond
-    (coll? v)
-    (if (coll? (first v))
-      (to-array (map tf-vals v))
-      (case (.getName (type (first v)))
-        "java.lang.Long" (int-array v)
-        "java.lang.Double" (float-array v)))
-    (= (.getName (type v)) "java.lang.Long") (int v)
-    (= (.getName (type v)) "java.lang.Double") (int v)
-    ;; anything else
-    true v))
-
-;; potential clj-to-ops macro
-
-
-(defn prep-for-tf
-  "Take clojure val and return tensorflow constant (Operation)"
-  [val]
-  (outputify (str (gensym))
-             (Tensor/create (tf-vals val))))
-
-
 (prep-for-tf 1)
 (prep-for-tf [1])
 (prep-for-tf [[1]])
@@ -214,14 +195,25 @@
 (macroexpand '(clj->ops (+ 1 1) graph))
 ;; => (let [args [1 1]] (-> (.opBuilder graph "Add" "G__25782") (.addInput (prep-for-tf (get args 0))) (.addInput (prep-for-tf (get args 1))) .build (.output 0)))
 
-(clj->ops (+ 1 2) graph)
+(macroexpand
+ '(clj->ops (+ 1 2) graph))
 
 
 
+(def graph (new Graph))
+(def divide (clj->ops (/ [8 2] [2 2]) graph))
+(def divide (clj->ops (/ [[8 2]] [[2 2]]) graph))
+(def divide (clj->ops (/ (range 1 1000000) (range 1 1000000)) graph))
+
+(time
+ (run-in-session graph divide))
+;; Just under a second on my machine (this is just the cpu)
 
 
-
-
+(time
+ (doall
+  (map (partial apply /)
+       (map vector (range 1 1000000) (range 1 1000000)))))
 
 
 ;; As a simple example of deep learning, lets train a network on the XOR
@@ -230,14 +222,6 @@
 
 (def graph (new Graph))
 
-(defn outputify [name tensor]
-  (->
-   (.opBuilder graph "Const" name)
-   (.setAttr "dtype" (.dataType tensor))
-   (.setAttr "value" tensor)
-   .build
-   (.output 0)
-   ))
 
 (def training-input
   (outputify "train-in"
@@ -275,7 +259,7 @@
 (def graph (new Graph))
 (def divide
   (->
-   (.opBuilder graph "Tanh" "dicks")
+   (.opBuilder graph "Tanh" "tanh")
    (.addInput tensor-1)
    .build
    (.output 0)
@@ -293,3 +277,44 @@
       (.copyTo
        (make-array java.lang.Integer/TYPE 1 2))
       ))
+
+;; Some actual data
+;; I'm going to use the example problem from
+;; https://www.tensorflow.org/tutorials/wide
+
+(def prep-data-from-url (comp butlast csv/read-csv slurp))
+
+(def train-data
+  (prep-data-from-url
+   "http://mlr.cs.umass.edu/ml/machine-learning-databases/adult/adult.data"))
+
+(def test-data
+  (prep-data-from-url "http://mlr.cs.umass.edu/ml/machine-learning-databases/adult/adult.test"))
+
+(def columns ["age" "workclass" "fnlwgt" "education" "education_num" "marital_status" "occupation" "relationship" "race" "gender" "capital_gain" "capital_loss" "hours_per_week" "native_country" "income_bracket"])
+
+
+(map (comp read-string first) train-data)
+(map (comp clojure.string/trim second) train-data)
+
+(read-string "")
+
+;; Converting Data to Tensors
+
+
+;; Experimenting with the api
+;; params
+(def learning-rate 0.01)
+(def training-epochs 1000)
+(def display-step 50)
+
+;; Data
+
+(def train-X (tf/constant [3.3 4.4 5.5 6.71 6.93 4.168 9.779 6.182 7.59 2.167 7.042 10.791 5.313 7.997 5.654 9.27 3.1]))
+
+(def train-Y (tf/constant [1.7 2.76 2.09 3.19 1.694 1.573 3.366 2.596 2.53 1.221 2.827 3.465 1.65 2.904 2.42 2.94 1.3]))
+
+
+(utils/tensor->clj
+ (tf/session-run train-X))
+
