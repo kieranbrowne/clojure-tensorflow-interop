@@ -314,7 +314,8 @@
 
 (def train-Y (tf/constant [1.7 2.76 2.09 3.19 1.694 1.573 3.366 2.596 2.53 1.221 2.827 3.465 1.65 2.904 2.42 2.94 1.3]))
 
+(def pred (tf/add (tf/mult X W) b))
+
 
 (utils/tensor->clj
- (tf/session-run train-X))
-
+ (tf/session-run (tf/* train-X train-Y)))

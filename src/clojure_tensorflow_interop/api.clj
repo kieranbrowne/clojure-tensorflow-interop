@@ -5,6 +5,7 @@
             TensorFlow
             Tensor
             Session
+            Shape
             Output
             Operation
             OperationBuilder
@@ -17,7 +18,7 @@
   "Returns a function which creates an operation for the graph"
   [op-profile]
   (let [{:keys [operation node-name attrs inputs]
-         :or {node-name (str (gensym "tf")) attrs {} inputs []}
+         :or {node-name (str (gensym operation)) attrs {} inputs []}
          } op-profile]
     (fn [graph]
       (utils/thread graph
@@ -29,9 +30,11 @@
                    #(.setAttr % (name (first attr)) (second attr)))
                  attrs)
                 ;; add inputs if any
-                (map (fn [input] #(.addInput % (input graph))) inputs)
+                (map (fn [input]
+                       #(.addInput % (input graph))) inputs)
                 #(.build %)
                 #(.output % 0)])))))
+
 
 
 
@@ -40,7 +43,57 @@
     (op-builder
      {:operation "Const"
       :attrs {:dtype (.dataType tensor)
-              :value tensor}})))
+              :value tensor
+              }})))
+
+(defn assign [val node-name]
+  (let [tensor (clj->tensor val)]
+    (op-builder
+     {:operation "Assign"
+      :inputs [node-name tensor]
+      })))
+
+(defn variable
+  ([val] (variable {}))
+  ([val bits]
+  #(let [tensor (clj->tensor val)]
+    ((op-builder
+      (merge
+       {:operation "Variable"
+        :attrs {:shape (utils/tensor->shape tensor)
+                :dtype (.dataType tensor)
+                ;; :initializer ((constant val) %)
+                :initializer init
+                }
+        } bits)) %))))
+
+(defn placeholder [val]
+  #(let [tensor (clj->tensor val)]
+     ((op-builder
+       {:operation "Placeholder"
+        :attrs {
+                ;; :shape (utils/tensor->shape tensor)
+                ;; :value tensor
+                ;; :dtype (.dataType tensor)
+                :dtype DataType/FLOAT
+                :value (clj->tensor 1.1)
+                }
+        }) %)))
+
+(defn get [val]
+  #(let [tensor (clj->tensor val)]
+     ((op-builder
+       {:operation "get"
+        :input [val]
+        }) %)))
+
+
+(def init (constant [1.]))
+
+(.name (.op (init (Graph.))))
+
+(session-run init)
+
 
 (defn mult [a b]
   (op-builder
@@ -52,29 +105,38 @@
    {:operation "Add"
     :inputs [a b]}))
 
+(defn pow [a b]
+  (op-builder
+   {:operation "Pow"
+    :inputs [a b]}))
+
+(defn sub [a b]
+  (op-builder
+   {:operation "Sub"
+    :inputs [a b]}))
+
+(defn tanh [a]
+  (op-builder
+   {:operation "Tanh"
+    :inputs [a]}))
+
 (defn n-args
   "This function takes a two argument operation like mult and add and
   returns a version which can take 2 -> infinity arguments like normal
-  clojure functions."
+  clojure functions.
+  TODO: Still causes stackoverflow for many args"
   [func]
-  (fn [& args]
-    (loop [inputs (drop 2 args)
-           out (apply func (take 2 args))]
-      (if (empty? inputs)
-        out
-        (recur (rest inputs) (func out (first inputs)))))))
+  (fn [& args] (reduce func args)))
 
 (def * (n-args mult))
 (def + (n-args add))
+(def - (n-args sub))
 
+(tensor->clj
+ (session-run (apply + (map constant (range 390 593)))))
 
-(apply + (into [] (take 2 '(1 2))))
-
-(defn * [& inputs]
-  (op-builder
-   {:operation "Mul"
-    :inputs inputs}))
-
+(session-run
+ (reduce add (map constant (range 3 3000))))
 
 ;; In this file I'm experimenting with possibilities for a tensorflow api
 ;; which feels clojurian.
@@ -101,26 +163,27 @@
         .runner
         (.fetch (.name (.op op)))
         .run
+        ;; .run
         (.get 0)
         ;; .dataType
         ;; (.copyTo (utils/output-shape op))
         ))
     ))
 
-(def a (constant [1.]))
-(def b (constant [2.]))
+(def a (constant 4))
+(def b (constant 2))
+(def b2 (constant 3))
 (def c (constant [2.]))
 (def d (constant [9.]))
 (def a*b (mult a b))
 
-(time
- (session-run (* a b)))
-(time
- (tensor->clj
-  (session-run (* a b c))))
+(session-run (pow (pow a b) b2))
 
 (tensor->clj
-  (session-run (+ a b c d)))
+ (session-run (* c d )))
+
+(tensor->clj
+ (session-run (tanh a)))
 
 (def a (constant 2))
 (def b (constant 3))

@@ -1,6 +1,7 @@
 (ns clojure-tensorflow-interop.utils
   (:import [org.tensorflow
             Tensor
+            Shape
             ]))
 
 
@@ -53,6 +54,12 @@
 (def tensor->clj (partial recursively array? vec))
 
 (def clj->tensor #(Tensor/create (tf-vals %)))
+
+(def tensor->shape
+  #(let [arr (.shape %)]
+     (Shape/make
+      (aget arr 0)
+      (java.util.Arrays/copyOfRange arr 1 (count arr)))))
 
 (defn thread
   "Approximately equivalent to -> macro.
