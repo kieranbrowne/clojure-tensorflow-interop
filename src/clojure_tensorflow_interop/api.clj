@@ -37,7 +37,6 @@
 
 
 
-
 (defn constant [val]
   (let [tensor (clj->tensor val)]
     (op-builder
@@ -88,13 +87,6 @@
         }) %)))
 
 
-(def init (constant [1.]))
-
-(.name (.op (init (Graph.))))
-
-(session-run init)
-
-
 (defn mult [a b]
   (op-builder
    {:operation "Mul"
@@ -115,10 +107,13 @@
    {:operation "Sub"
     :inputs [a b]}))
 
-(defn tanh [a]
+(defn reduce-sum [a b]
   (op-builder
-   {:operation "Tanh"
-    :inputs [a]}))
+   {:operation "Sum"
+    :inputs [a b]
+    }))
+
+(session-run (reduce-sum [1. 2. 3.]))
 
 (defn n-args
   "This function takes a two argument operation like mult and add and
@@ -148,72 +143,42 @@
 ;; nodes.
 
 
+(defn op-run
+  "Call session runner on single op"
+  [graph session op]
+  (-> session
+      .runner
+      (.fetch (.name (.op (op graph))))
+      .run
+      (.get 0)
+      ))
+
 (defn session-run
-  ""
-  [operation]
+  "Run list of ops, return last"
+  [& operations]
   (let [graph (new Graph)
-        op (operation graph)
-        copy-to (utils/output-shape op)
-        ]
+        session (new Session graph)
+        op-run (partial op-run graph session)
+        copy-to (utils/output-shape ((last operations) (Graph.)))]
+
+    ;; run first n ops to set up state
+    (doseq [op (butlast operations)]
+      (op-run op))
+
+    ;; run final op and return value
     ((if (utils/array? copy-to)
-       #(.copyTo % (utils/output-shape op))
-       #(.intValue %)
-       )
-    (-> (new Session graph)
-        .runner
-        (.fetch (.name (.op op)))
-        .run
-        ;; .run
-        (.get 0)
-        ;; .dataType
-        ;; (.copyTo (utils/output-shape op))
-        ))
-    ))
+       #(.copyTo % copy-to)
+       #(.intValue %))
+     (op-run (last operations)))))
 
-(def a (constant 4))
-(def b (constant 2))
-(def b2 (constant 3))
-(def c (constant [2.]))
-(def d (constant [9.]))
-(def a*b (mult a b))
-
-(session-run (pow (pow a b) b2))
+(def x (constant [1. 0.5 0]))
+(def W (constant [1. 0.5 0]))
 
 (tensor->clj
- (session-run (* c d )))
+ (session-run (reduce-sum x W)))
+
+(tensor->clj
+ (session-run a (* c d )))
 
 (tensor->clj
  (session-run (tanh a)))
-
-(def a (constant 2))
-(def b (constant 3))
-((variable 3) (new Graph))
-
-(map #(name (first %)) {:dtype 1 :value 3})
-
-
-
-(defn outputify [name tensor]
-  (->
-   (.opBuilder graph "Const" name)
-   (.setAttr "dtype" (.dataType tensor))
-   (.setAttr "value" tensor)
-   .build
-   (.output 0)
-   ))
-
-
-;; potential clj-to-ops macro
-
-
-
-
-;; (defn run-in-session [graph op]
-;;   (utils/recursively utils/array? vec
-;;                (-> (new Session graph)
-;;                    .runner
-;;                    (.fetch (.name (.op op)))
-;;                    .run
-;;                    (.get 0)
-;;                    (.copyTo (output-shape op))
-;;                    )))
