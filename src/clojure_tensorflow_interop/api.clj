@@ -116,6 +116,27 @@
    {:operation "Sub"
     :inputs [a b]}))
 
+(defn transpose [a]
+  (op-builder
+   {:operation "Transpose"
+    :inputs [a (constant [0])]}))
+
+(defn matmul [a b]
+  (op-builder
+   {:operation "MatMul"
+    :inputs [a b]}))
+;; alias
+(def dot matmul)
+
+
+(session-run (dot
+              (constant [[1 2 3] [4 5 6]])
+              (constant [[7 8] [9 10] [11 12]])))
+
+(session-run (constant [[1 2 4] [1 2 4]]))
+
+
+(session-run (transpose (constant [1 2 4])))
 
 (defn n-args
   "This function takes a two argument operation like mult and add and
@@ -148,13 +169,15 @@
 (defn op-run
   "Call session runner on single op.
   Returns tensor object"
-  [graph session op]
+  ([op] (op-run (Graph.) op))
+  ([graph op] (op-run graph (Session. graph) op))
+  ([graph session op]
   (-> session
       .runner
       (.fetch (.name (.op (op graph))))
       .run
       (.get 0)
-      ))
+      )))
 
 (defn session-run
   "Run list of ops, return last"
@@ -176,5 +199,5 @@
 (def x (constant [1. 0.5 0]))
 (def W (constant [1. 0.5 0]))
 
-(session-run (sum x))
+(session-run (mult x W))
 

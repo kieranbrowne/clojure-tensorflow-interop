@@ -21,7 +21,7 @@
   (case (count dims)
     0 fill
     1 (repeat (first dims) fill)
-    (repeat (first dims) (apply make-coll (rest dims)))
+    (repeat (first dims) (apply (partial make-coll fill) (rest dims)))
     ))
 
 (def array?
@@ -69,7 +69,7 @@
                 "INT32" 0
                 "FLOAT" 0.0)]
     (tf-vals
-     (apply make-coll d dims))))
+     (apply (partial make-coll d) dims))))
 
 (defn get-tensor-val [tensor]
   (let [copy-to (output-shape tensor)]
