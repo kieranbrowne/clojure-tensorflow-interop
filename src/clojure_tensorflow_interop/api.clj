@@ -31,7 +31,9 @@
                  attrs)
                 ;; add inputs if any
                 (map (fn [input]
-                       #(.addInput % (input graph))) inputs)
+                       #(.addInput %
+                                   (if (fn? input) (input graph) input)
+                                   )) inputs)
                 #(.build %)
                 #(.output % 0)])))))
 
@@ -97,6 +99,13 @@
    {:operation "Add"
     :inputs [a b]}))
 
+(defn sum
+  ([t] (sum t (constant 0)))
+  ([t dims]
+   (op-builder
+    {:operation "Sum"
+     :inputs [t dims]})))
+
 (defn pow [a b]
   (op-builder
    {:operation "Pow"
@@ -107,13 +116,6 @@
    {:operation "Sub"
     :inputs [a b]}))
 
-(defn reduce-sum [a b]
-  (op-builder
-   {:operation "Sum"
-    :inputs [a b]
-    }))
-
-(session-run (reduce-sum [1. 2. 3.]))
 
 (defn n-args
   "This function takes a two argument operation like mult and add and
@@ -144,7 +146,8 @@
 
 
 (defn op-run
-  "Call session runner on single op"
+  "Call session runner on single op.
+  Returns tensor object"
   [graph session op]
   (-> session
       .runner
@@ -158,27 +161,20 @@
   [& operations]
   (let [graph (new Graph)
         session (new Session graph)
-        op-run (partial op-run graph session)
-        copy-to (utils/output-shape ((last operations) (Graph.)))]
+        op-run (partial op-run graph session)]
 
     ;; run first n ops to set up state
     (doseq [op (butlast operations)]
       (op-run op))
 
     ;; run final op and return value
-    ((if (utils/array? copy-to)
-       #(.copyTo % copy-to)
-       #(.intValue %))
+    (tensor->clj
      (op-run (last operations)))))
+
+(session-run (constant [0.0]))
 
 (def x (constant [1. 0.5 0]))
 (def W (constant [1. 0.5 0]))
 
-(tensor->clj
- (session-run (reduce-sum x W)))
+(session-run (sum x))
 
-(tensor->clj
- (session-run a (* c d )))
-
-(tensor->clj
- (session-run (tanh a)))
