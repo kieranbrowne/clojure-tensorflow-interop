@@ -310,12 +310,42 @@
 
 ;; Data
 
-(def train-X (tf/constant [3.3 4.4 5.5 6.71 6.93 4.168 9.779 6.182 7.59 2.167 7.042 10.791 5.313 7.997 5.654 9.27 3.1]))
+(def training-data
+  ;; input => output
+  [ [0. 0. 1.]   [0.]
+    [0. 1. 1.]   [1.]
+    [1. 0. 1.]   [1.]
+    [1. 1. 1.]   [0.] ])
 
-(def train-Y (tf/constant [1.7 2.76 2.09 3.19 1.694 1.573 3.366 2.596 2.53 1.221 2.827 3.465 1.65 2.904 2.42 2.94 1.3]))
+(def training-input
+  (tf/constant (take-nth 2 training-data)))
 
-(def pred (tf/add (tf/mult X W) b))
+(def training-output
+  (tf/constant (take-nth 2 (rest training-data))))
 
+(defn random-weights
+  [& dims]
+  ((reduce #(partial repeatedly %2 %1)
+           #(dec (rand 2))
+           (reverse dims))))
 
-(utils/tensor->clj
- (tf/session-run (tf/* train-X train-Y)))
+(def synapses-0
+  (tf/constant (random-weights 3 5)))
+
+(def synapses-1
+  (tf/constant (random-weights 5 1)))
+
+(def step-forward (comp tf/tanh tf/dot))
+
+(def feed-forward
+  (step-forward
+   (step-forward training-input synapses-0)
+   synapses-1))
+
+(def error (tf/sub training-output feed-forward))
+
+(def mean-error
+ (tf/mean (tf/abs error)))
+
+(tf/session-run mean-error)
+

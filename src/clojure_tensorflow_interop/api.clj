@@ -94,9 +94,19 @@
    {:operation "Mul"
     :inputs [a b]}))
 
+(defn div [a b]
+  (op-builder
+   {:operation "Div"
+    :inputs [a b]}))
+
 (defn add [a b]
   (op-builder
    {:operation "Add"
+    :inputs [a b]}))
+
+(defn sub [a b]
+  (op-builder
+   {:operation "Sub"
     :inputs [a b]}))
 
 (defn sum
@@ -106,15 +116,25 @@
     {:operation "Sum"
      :inputs [t dims]})))
 
+(defn tanh [a]
+  (op-builder
+   {:operation "Tanh"
+    :inputs [a]}))
+
 (defn pow [a b]
   (op-builder
    {:operation "Pow"
     :inputs [a b]}))
 
-(defn sub [a b]
+(defn abs [a]
   (op-builder
-   {:operation "Sub"
-    :inputs [a b]}))
+   {:operation "Abs"
+    :inputs [a]}))
+
+(defn mean [a]
+  (op-builder
+   {:operation "Mean"
+    :inputs [a (constant 0)]}))
 
 (defn transpose [a]
   (op-builder
