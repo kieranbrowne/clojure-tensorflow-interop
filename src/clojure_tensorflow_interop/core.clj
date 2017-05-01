@@ -266,7 +266,7 @@
 
 ;; Now we can break up our operations steps into logical breaks
 ;; initialise variables and run the untrained network
-(sess-run [(tf/initialise-global-variables)
+(sess-run [(tf/global-variables-initializer)
            (network inputs)])
 
 ;; Run the train-network operation 10000 times and then check the error.
