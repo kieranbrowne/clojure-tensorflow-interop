@@ -12,9 +12,10 @@
   ;; data.csv is only used for reading example data
   ;; not a requirement for using tensorflow
   (:require
-   [clojure-tensorflow-interop.api :as tf]
    [clojure.data.csv :as csv]
-   [clojure-tensorflow-interop.utils :as utils]))
+   [clojure-tensorflow-interop.api :as tf]
+   [clojure-tensorflow-interop.utils :as utils
+    :refer [tensor->clj clj->tensor]]))
 
 ;; We can test our installation by running the version method
 ;; on the TensorFlow class.
@@ -133,7 +134,7 @@
 (apply str (map char result))
 ;; => "Hello, World!"
 
-;; So we successfully run a basic TensorFlow graph, but that code made my
+;; So we successfully ran a basic TensorFlow graph, but that code made my
 ;; eyes bleed. This is partially because the TensorFlow Java api is so
 ;; new and doesn't have the multitudes of helper functions that python
 ;; has yet.
@@ -151,7 +152,7 @@
 ;; structure, and no programming language has a better story for working
 ;; with data structures than clojure.
 
-;; The code is data 
+;; The code is data
 
 ;; And then, with a short macro we can turn our
 ;; (clj->ops (/ [8 2] [2 2]))
@@ -162,154 +163,7 @@
 ;; Below, I've hashed out a proof of concept macro to turn a clojure
 ;; s-expression into a big hairy TensorFlow operation.
 
-
-(prep-for-tf 1)
-(prep-for-tf [1])
-(prep-for-tf [[1]])
-
-;; To do this I first need to tell clojure about some stuff.
-(defn fn-to-op [f]
-  (case f
-    * "Mult"
-    / "Div"
-    + "Add"
-    def "Const"
-    java.lang.Math/tanh "Tanh"
-    f))
-
-(defmacro clj->ops
-  "UNFINISHED: I'm curious whether we can turn standard
-  Clojure code into TensorFlow operations."
-  [sexp graph]
-  (let [op (fn-to-op (first sexp))
-        inputs (rest sexp)]
-    (list 'let (vector 'args (vec inputs))
-    (concat (list '-> (list '.opBuilder graph op (str (gensym))))
-            (map #(list '.addInput
-                        (list 'prep-for-tf
-                              (list 'get 'args %1)))
-                 (range (count inputs)))
-          (list '.build '(.output 0))))))
-
-
-(macroexpand '(clj->ops (+ 1 1) graph))
-;; => (let [args [1 1]] (-> (.opBuilder graph "Add" "G__25782") (.addInput (prep-for-tf (get args 0))) (.addInput (prep-for-tf (get args 1))) .build (.output 0)))
-
-(macroexpand
- '(clj->ops (+ 1 2) graph))
-
-
-
-(def graph (new Graph))
-(def divide (clj->ops (/ [8 2] [2 2]) graph))
-(def divide (clj->ops (/ [[8 2]] [[2 2]]) graph))
-(def divide (clj->ops (/ (range 1 1000000) (range 1 1000000)) graph))
-
-(time
- (run-in-session graph divide))
-;; Just under a second on my machine (this is just the cpu)
-
-
-(time
- (doall
-  (map (partial apply /)
-       (map vector (range 1 1000000) (range 1 1000000)))))
-
-
-;; As a simple example of deep learning, lets train a network on the XOR
-;; gate.
-
-
-(def graph (new Graph))
-
-
-(def training-input
-  (outputify "train-in"
-             (Tensor/create
-              (to-array (map int-array [[0 0]
-                                        [1 0]
-                                        [0 1]
-                                        [1 1]])))))
-
-(def training-output
-  (outputify "train-out"
-             (Tensor/create
-              (to-array (map int-array [[0]
-                                        [1]
-                                        [1]
-                                        [0]])))))
-
-(def synapses-0
-  (outputify "syn0"
-             (Tensor/create
-              (to-array (map int-array [[2 2]]))
-              )))
-
-
-(def divide
-  (->
-   (.opBuilder graph "Div" "my-dividing-operation")
-   (.addInput tensor-1)
-   (.addInput tensor-2)
-   .build
-   (.output 0)
-   ))
-
-;; activation op
-(def graph (new Graph))
-(def divide
-  (->
-   (.opBuilder graph "Tanh" "tanh")
-   (.addInput tensor-1)
-   .build
-   (.output 0)
-   ))
-
-(def session (new Session graph))
-
-
-(def result
-  (-> session
-      .runner
-      (.fetch (.name (.op divide)))
-      .run
-      (.get 0)
-      (.copyTo
-       (make-array java.lang.Integer/TYPE 1 2))
-      ))
-
-;; Some actual data
-;; I'm going to use the example problem from
-;; https://www.tensorflow.org/tutorials/wide
-
-(def prep-data-from-url (comp butlast csv/read-csv slurp))
-
-(def train-data
-  (prep-data-from-url
-   "http://mlr.cs.umass.edu/ml/machine-learning-databases/adult/adult.data"))
-
-(def test-data
-  (prep-data-from-url "http://mlr.cs.umass.edu/ml/machine-learning-databases/adult/adult.test"))
-
-(def columns ["age" "workclass" "fnlwgt" "education" "education_num" "marital_status" "occupation" "relationship" "race" "gender" "capital_gain" "capital_loss" "hours_per_week" "native_country" "income_bracket"])
-
-
-(map (comp read-string first) train-data)
-(map (comp clojure.string/trim second) train-data)
-
-(read-string "")
-
-;; Converting Data to Tensors
-
-
-;; Experimenting with the api
-;; params
-(def learning-rate 0.01)
-(def training-epochs 1000)
-(def display-step 50)
-
-;; Data
-
+;; Right, lets actually do some machine learning
 (def training-data
   ;; input => output
   [ [0. 0. 1.]   [0.]
@@ -317,35 +171,57 @@
     [1. 0. 1.]   [1.]
     [1. 1. 1.]   [0.] ])
 
-(def training-input
-  (tf/constant (take-nth 2 training-data)))
+(def inputs (tf/constant (take-nth 2 training-data)))
+(def outputs (tf/constant (take-nth 2 (rest training-data))))
 
-(def training-output
-  (tf/constant (take-nth 2 (rest training-data))))
+(def random-synapse #(dec (rand 2)))
 
-(defn random-weights
-  [& dims]
-  ((reduce #(partial repeatedly %2 %1)
-           #(dec (rand 2))
-           (reverse dims))))
+(def weights
+  (tf/variable
+   (repeatedly 3 #(repeatedly 1 random-synapse))))
 
-(def synapses-0
-  (tf/constant (random-weights 3 5)))
 
-(def synapses-1
-  (tf/constant (random-weights 5 1)))
+(defn network [x]
+  (tf/sigmoid (tf/matmul x weights)))
 
-(def step-forward (comp tf/tanh tf/dot))
+(defn error [network-output]
+  (tf/div (tf/pow (tf/sub outputs network-output) (tf/constant 2.)) (tf/constant 2.0)))
 
-(def feed-forward
-  (step-forward
-   (step-forward training-input synapses-0)
-   synapses-1))
+(defn error' [network-output]
+  (tf/sub network-output outputs))
 
-(def error (tf/sub training-output feed-forward))
+(defn sigma' [x]
+  (tf/mult x (tf/sub (tf/constant 1.) x)))
 
-(def mean-error
- (tf/mean (tf/abs error)))
 
-(tf/session-run mean-error)
+(tf/with-session
+  (tf/global-variables-initializer)
+  (network inputs)
+  (error
+   (network inputs))
+  )
 
+
+(defn deltas [network-output]
+  (tf/matmul
+   (tf/transpose inputs)
+   (tf/mult
+    (error' (network inputs))
+    (sigma' (network inputs)))))
+
+
+(def sess (tf/session))
+(def sess-run (partial tf/session-run tf/default-graph sess))
+
+(sess-run [(tf/initialise-global-variables)])
+
+(sess-run [(network inputs)])
+
+(sess-run
+ [(repeat 10000
+          (tf/assign weights (tf/sub weights (deltas (network inputs)))))
+  (tf/div (tf/sum (tf/abs (error (network inputs)))) (tf/constant 4.))
+  ])
+
+(sess-run [(network (tf/constant [[1. 1. 1.]]))])
+;; it motherflipping works.
