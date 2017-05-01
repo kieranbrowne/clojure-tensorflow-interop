@@ -1,7 +1,6 @@
 (ns clojure-tensorflow-interop.helpers
   (:require [clojure-tensorflow-interop.utils
-             :as utils :refer [tensor->clj clj->tensor]]
-            [clojure-tensorflow-interop.api :as tf])
+             :as utils :refer [tensor->clj clj->tensor]])
   (:import [org.tensorflow
             TensorFlow
             Tensor
@@ -30,7 +29,7 @@
 
 (defn op-builder
   "Returns a function which creates an operation for the graph"
-  ([op-profile] (op-builder op-profile tf/default-graph))
+  ([op-profile] (op-builder op-profile default-graph))
   ([op-profile graph]
    (let [{:keys [operation node-name attrs inputs]
           :or {node-name (str (gensym operation)) attrs {} inputs []}
@@ -192,7 +191,7 @@
 (defn op-run
   "Call session runner on single op.
   Returns tensor object"
-  ([op] (op-run tf/default-graph op))
+  ([op] (op-run default-graph op))
   ([graph op] (op-run graph (Session. graph) op {}))
   ([graph session op] (op-run graph session op {}))
   ([graph session op feed-map]
@@ -206,7 +205,7 @@
 
 (defn session-run
   "Run list of ops, return last"
-  ([ops] (session-run tf/default-graph ops))
+  ([ops] (session-run default-graph ops))
   ([graph ops] (session-run graph (Session. graph) ops))
   ([graph session ops]
    (let [ops (flatten ops)
