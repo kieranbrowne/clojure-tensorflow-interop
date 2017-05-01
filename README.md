@@ -4,36 +4,14 @@ This example app shows how you can run TensorFlow's new Java api from inside clo
 
 This solution is explained in detail [here](http://kieranbrowne.com/clojure-tensorflow-interop).
 
+Read more about TensorFlow's java api [here](https://www.tensorflow.org/versions/master/install/install_java).
 
-## Method 1: Install the system binary
+## Method 1: Add the maven dependency
 
-### 1. [Install Maven](https://maven.apache.org/install.html)
+### Just add the dependency to `project.clj`
+[org.tensorflow/tensorflow "1.1.0-rc1"]
 
-```sh
-$ brew install maven
-```
-
-### 2. Download TensorFlow jar
-```sh
-$ curl -O https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-1.0.0-PREVIEW1.jar
-```
-
-### 3. Download the appropriate Tensor Flow Native library for your system
-
-```sh
-$ TF_TYPE="cpu" && OS=$(uname -s | tr '[:upper:]' '[:lower:]') && mkdir -p ./jni && curl -L "https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-${TF_TYPE}-${OS}-x86_64-1.0.0-PREVIEW1.tar.gz" | tar -xz -C ./jni
-```
-
-### 4. Use Maven to install the library locally
-```sh
-$ mvn install:install-file \
-		-Durl=file:repo \
-		-DgroupId=org.tensorflow \
-		-DartifactId=libtensorflow \
-		-Dversion=1.0.1 \
-		-Dpackaging=jar \
-		-Dfile=libtensorflow-1.0.0-PREVIEW1.jar \
-```
+> Note: This dependency requires java 8. If that isn't your version by default, you can force lein to use it by adding the `:java-cmd "/path/to/java"` key to your `project.clj`.
 
 ## Method 2: Build from source
 
@@ -74,11 +52,3 @@ $ mvn install:install-file \
       -Dfile=bazel-bin/tensorflow/java/libtensorflow.jar \
       -DpomFile=bazel-bin/tensorflow/java/pom.xml
 ```
-
-
-## License
-
-Copyright © 2017 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.

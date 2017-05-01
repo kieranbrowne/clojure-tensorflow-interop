@@ -5,7 +5,6 @@
             DataType
             ]))
 
-
 (defn recursively
   "Apply function to all items in nested data structure if
   condition function is met."
@@ -13,7 +12,6 @@
   (if (apply-if-fn data)
     (func (map (partial recursively apply-if-fn func) data))
     data))
-
 
 (defn make-coll
   "Make a collection of x,y,z... dimensions"
@@ -70,21 +68,6 @@
       (array? copy-to) (.copyTo tensor copy-to)
       (float? copy-to) (.floatValue tensor)
       ((complement float?) copy-to) (.intValue tensor))))
-
-;; (defprotocol Tensorflow
-;;   "Helper functions for tensors"
-;;   (output-shape [tensor] "")
-;;   (get-tensor-val [tensor] ""))
-
-;; (extend-type org.tensorflow.Tensor
-;;   Tensorflow
-;;   (output-shape [tensor] (output-shape (tensor->shape tensor))))
-
-;; (extend-type org.tensorflow.Shape
-;;   Tensorflow
-;;   (output-shape [tensor] )
-
-
 
 (def tensor->clj (comp (partial recursively array? vec) get-tensor-val))
 
