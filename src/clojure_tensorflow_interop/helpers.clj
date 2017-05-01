@@ -1,4 +1,5 @@
 (ns clojure-tensorflow-interop.helpers
+  (:refer-clojure :exclude [get + * -])
   (:require [clojure-tensorflow-interop.utils
              :as utils :refer [tensor->clj clj->tensor]])
   (:import [org.tensorflow
