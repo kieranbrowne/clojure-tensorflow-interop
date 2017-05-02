@@ -1,10 +1,10 @@
-# How to run TensorFlow native library in Clojure 
+# How to run TensorFlow in Clojure 
 
-This example app shows how you can run TensorFlow's new Java api from inside clojure.
+TensorFlow now has a (very alpha) Java api which means clojure gets one for free. For now, Java's api is very sparse but don’t let that stop you getting your hands dirty, it already provides everything we need to work with TensorFlow in Clojure. With just java interop and a couple of helper functions we can start writing great idiomatic Clojure. 
 
-This solution is explained in detail [here](http://kieranbrowne.com/clojure-tensorflow-interop).
+To get started, read [Running TensorFlow in Clojure](http://kieranbrowne.com/research/clojure-tensorflow-interop) which explains the code and the concepts.
 
-Read more about TensorFlow's java api [here](https://www.tensorflow.org/versions/master/install/install_java).
+You can also read more about TensorFlow's java api [here](https://www.tensorflow.org/versions/master/install/install_java).
 
 ## Method 1: Add the maven dependency
 
